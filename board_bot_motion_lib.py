@@ -3,6 +3,8 @@ import numpy as np
 import scipy.integrate
 from scipy.interpolate import CubicSpline
 
+PEN_UP = 0
+PEN_DOWN = 1
 
 class VeloProfile:
     def __init__(self, init_v: float, v_max: float, final_v: float, accel: float, total_dist: float):
@@ -51,13 +53,16 @@ class VeloProfile:
 
 
 class Path:
-    def __init__(self, xs, ys, max_v, accel):
+    def __init__(self, xs, ys, pen_states, max_v, accel):
         xs_len = len(xs)
         ys_len = len(ys)
         if xs_len != ys_len:
             raise Exception("lengths of x and y list do not match.")
         if xs_len < 3:
             raise Exception("Must have at least 3 points to form a path.")
+        for state in pen_states:
+            if state != PEN_UP and state != PEN_DOWN:
+                raise Exception("Invalid Pen State Detected")
 
         ts = np.linspace(0, 1, num=xs_len)
         points = [(xs[i], ys[i]) for i in range(xs_len)]
@@ -78,12 +83,14 @@ class Path:
         self.spline = CubicSpline(s, points, bc_type='natural')
         self.derivative = self.spline.derivative()
 
+        self.pen_states = CubicSpline(s, pen_states, bc_type='natural')
+
         self.velo_profile = VeloProfile(0, max_v, 0, accel, self.dist)
 
     def get_motion_data(self, s: float, t: float):
 
         if t > self.velo_profile.duration:
-            return None, None, None, None
+            return None, None, None, None, None
 
         velocity = self.velo_profile.profile(t)
 
@@ -91,15 +98,15 @@ class Path:
         dx, dy = self.derivative(s)
         theta = math.atan2(dy, dx)
 
-        return x, y, theta, velocity
+        return x, y, theta, velocity, round(self.pen_states(s).item())
+    
+
+def to_line_lens(x: float, y: float, spool_dist: float):
+    return math.hypot(x, y), math.hypot(spool_dist - x, y)
 
 
-def to_line_lens(x: float, y: float):
-    return math.hypot(x, y), math.hypot(1 - x, y)
-
-
-def point_vel_to_spool_vel(x: float, y: float, x_vel: float, y_vel: float, spool_radius: float):
-    l1, l2 = to_line_lens(x, y)
+def point_vel_to_spool_vel(x: float, y: float, x_vel: float, y_vel: float, spool_radius: float, spool_dist: float):
+    l1, l2 = to_line_lens(x, y, spool_dist)
     l1_vel, l2_vel = (x * x_vel + y * y_vel) / l1, (-x * x_vel + y * y_vel) / l2
     return l1_vel / spool_radius, l2_vel / spool_radius
 
