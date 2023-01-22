@@ -10,10 +10,7 @@ def main():
     # Note to Self: each spool is 15.84 mm in diameter
     spool_radius = 10
 
-    # Circle Path Variables
-    circle_radius = 0.1
-    circle_x = 0.5
-    circle_y = 0.5
+    # Path Variables
     max_vel = 1
     accel = 2
 
@@ -33,7 +30,7 @@ def main():
     right_spool_center = (screen_size[0] - spool_radius, spool_radius)
 
     # Generate path x and y coordinates
-    xs, ys = vision.scan_image("C:/Users/coles/Desktop/heart.png")
+    xs, ys = vision.scan_image("images/test2.jpg")
     np.insert(xs, 0, x)
     np.insert(ys, 0, y)
 
@@ -42,14 +39,6 @@ def main():
 
     # Generate the path
     path = motion.Path(xs, ys, pen_states, max_vel, accel)
-
-    # Plot the path using matplotlib
-    fig = plt.figure()
-    ax = fig.add_subplot()
-    ax.set_aspect('equal', adjustable='box')
-    s = [t * 2 * math.pi * circle_radius for t in ts]
-    plt.plot(path.spline(s)[:, 0], path.spline(s)[:, 1], label='spline')
-    plt.show()
 
     # Plot the velocity profile
     ts = np.linspace(0, path.velo_profile.duration, num=100)
@@ -102,10 +91,6 @@ def main():
         # Draw the two pulleys
         pygame.draw.circle(screen, (0, 0, 0), left_spool_center, spool_radius)
         pygame.draw.circle(screen, (0, 0, 0), right_spool_center, spool_radius)
-
-        # Draw the circular path
-        pygame.draw.circle(screen, (255, 0, 0),
-                           (0.5 * screen_size[0], 0.5 * screen_size[1]), 0.1 * screen_size[0], width=1)
 
         # Draw the pulley strings
         pygame.draw.line(screen, (0, 0, 0), left_spool_center, pointer_center, cable_width)
