@@ -1,4 +1,7 @@
 import math
+
+import matplotlib
+
 import board_bot_motion_lib as motion
 import pygame
 import numpy as np
@@ -13,7 +16,7 @@ def main():
     spool_draw_radius = 10
 
     # Path Variables
-    max_vel = 1
+    max_vel = 2
     accel = 2
 
     # Starting pointer position. x and y go from 0 to 1
@@ -34,10 +37,12 @@ def main():
     right_spool_center = (screen_size[0] - spool_draw_radius, spool_draw_radius)
 
     # Generate path x and y coordinates
-    xs, ys = vision.scan_image("images/madeline.png")
+    xs, ys = vision.scan_image("images/circle.jpg")
 
     # Plot the desired path
     plt.axes().set_aspect('equal')
+    plt.xlim(left=0.0, right=1.0)
+    plt.ylim(bottom=0.0, top=1.0)
     plt.plot(xs, 1.0 - ys)
     plt.show()
 
@@ -127,9 +132,49 @@ def main():
 
         # Theta != None iff we haven't finished the path
         if theta is not None:
-            x += v * math.cos(theta) * dt
-            y += v * math.sin(theta) * dt
-            s += v * dt
+            print(str((t, path.velo_profile.duration)))
+            k1x = v * math.cos(theta)
+            k1y = v * math.sin(theta)
+
+            dt1 = dt/2.0
+
+            _, _, theta2, v2, _ = path.get_motion_data(s + math.hypot(k1x * dt1, k1y * dt1), t + dt1)
+
+            if theta2 is None:
+                x += k1x * dt
+                y += k1y * dt
+                s += v * dt
+            else:
+                k2x = v2 * math.cos(theta2)
+                k2y = v2 * math.sin(theta2)
+
+                _, _, theta3, v3, _ = path.get_motion_data(s + math.hypot(k2x * dt1, k2y * dt1), t + dt1)
+
+                if theta3 is None:
+                    x += k1x * dt
+                    y += k1y * dt
+                    s += v * dt
+                else:
+                    k3x = v3 * math.cos(theta3)
+                    k3y = v3 * math.sin(theta3)
+
+                    _, _, theta4, v4, _ = path.get_motion_data(s + math.hypot(k3x * dt, k2y * dt), t + dt)
+
+                    if theta4 is None:
+                        x += k1x * dt
+                        y += k1y * dt
+                        s += v * dt
+                    else:
+                        k4x = v4 * math.cos(theta4)
+                        k4y = v4 * math.sin(theta4)
+
+                        kx = (1.0 / 6.0) * (k1x + 2 * k2x + 2 * k3x + k4x)
+                        ky = (1.0 / 6.0) * (k1y + 2 * k2y + 2 * k3y + k4y)
+                        ks = (1.0 / 6.0) * (v + 2 * v2 + 2 * v3 + v4)
+
+                        x += kx * dt
+                        y += ky * dt
+                        s += ks * dt
 
             left_ang, right_ang = motion.point_vel_to_spool_vel(x, y, v*math.cos(theta), v*math.cos(theta),
                                                                 spool_actual_radius, 1)

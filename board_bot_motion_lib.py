@@ -101,7 +101,7 @@ class Path:
 
     def get_motion_data(self, s: float, t: float):
 
-        if t > self.velo_profile.duration:
+        if t > self.velo_profile.duration or s > self.dist:
             return None, None, None, None, None
 
         velocity = self.velo_profile.profile(t)
@@ -139,5 +139,6 @@ def to_line_lens(x: float, y: float, spool_dist: float):
 
 
 def point_vel_to_spool_vel(x: float, y: float, x_vel: float, y_vel: float, spool_radius: float, spool_dist: float):
-    l1_vel, l2_vel = x * x_vel + y * y_vel, y * y_vel - (spool_dist - x) * x_vel
+    l1, l2 = to_line_lens(x, y, spool_dist)
+    l1_vel, l2_vel = (x * x_vel + y * y_vel)/l1, (y * y_vel - (spool_dist - x) * x_vel)/l2
     return l1_vel / spool_radius, l2_vel / spool_radius
