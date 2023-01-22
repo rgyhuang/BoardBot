@@ -1,10 +1,12 @@
 import math
 import numpy as np
 import scipy.integrate
+from numpy import diff, add
 from scipy.interpolate import CubicSpline
 
 PEN_UP = 0
 PEN_DOWN = 1
+
 
 class VeloProfile:
     def __init__(self, init_v: float, v_max: float, final_v: float, accel: float, total_dist: float):
@@ -77,22 +79,22 @@ class Path:
         arc_pieces = [arc(t) for t in ts]
 
         s = [scipy.integrate.trapezoid(arc_pieces[:i], ts[:i]) for i in range(1, xs_len)]
-        print(s[207:])
-        for i in range(len(s) - 1):
-            diff = s[i+1] - s[i]
-            if diff < 0:
-                z=1
-                #print(i)
-                #print(str((s[i], s[i+1])))
 
-        self.dist = scipy.integrate.simpson(arc_pieces, ts)
+        self.dist = scipy.integrate.trapezoid(arc_pieces, ts)
         s.append(self.dist)
 
         self.arc_time_spline = CubicSpline(s, ts, bc_type='natural')
         self.spline = CubicSpline(s, points, bc_type='natural')
         self.derivative = self.spline.derivative()
 
-        self.pen_states = CubicSpline(s, pen_states, bc_type='natural')
+        self.pen_up_limits = []
+        self.pen_down_limits = []
+        for i in range(len(pen_states)):
+            state = pen_states[i]
+            if state == PEN_UP:
+                self.pen_up_limits.append(s[i])
+            else:
+                self.pen_down_limits.append(s[i])
 
         self.velo_profile = VeloProfile(0, max_v, 0, accel, self.dist)
 
@@ -107,15 +109,34 @@ class Path:
         dx, dy = self.derivative(s)
         theta = math.atan2(dy, dx)
 
-        return x, y, theta, velocity, round(self.pen_states(s).item())
-    
+        up_limits_len = len(self.pen_up_limits)
+        down_limits_len = len(self.pen_down_limits)
+
+        pen_up_thresh = 0
+        for i in range(1, up_limits_len):
+            if self.pen_up_limits[i] > s > self.pen_up_limits[i - 1]:
+                pen_up_thresh = self.pen_up_limits[i-1]
+                break
+
+        pen_down_thresh = 0
+        for i in range(1, down_limits_len):
+            if self.pen_down_limits[i] > s > self.pen_down_limits[i - 1]:
+                pen_down_thresh = self.pen_down_limits[i-1]
+                break
+
+        pen_state = None
+        if pen_up_thresh >= pen_down_thresh:
+            pen_state = PEN_UP
+        elif pen_up_thresh < pen_down_thresh:
+            pen_state = PEN_DOWN
+
+        return x, y, theta, velocity, pen_state
+
 
 def to_line_lens(x: float, y: float, spool_dist: float):
     return math.hypot(x, y), math.hypot(spool_dist - x, y)
 
 
 def point_vel_to_spool_vel(x: float, y: float, x_vel: float, y_vel: float, spool_radius: float, spool_dist: float):
-    l1, l2 = to_line_lens(x, y, spool_dist)
-    l1_vel, l2_vel = (x * x_vel + y * y_vel) / l1, (-x * x_vel + y * y_vel) / l2
+    l1_vel, l2_vel = x * x_vel + y * y_vel, y * y_vel - (spool_dist - x) * x_vel
     return l1_vel / spool_radius, l2_vel / spool_radius
-

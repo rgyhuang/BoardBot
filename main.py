@@ -8,14 +8,16 @@ import vision
 
 def main():
     # Note to Self: each spool is 15.84 mm in diameter
-    spool_radius = 10
+    # This is the equivalent in the simulator coordinate system
+    spool_actual_radius = 0.04525714285714285714285714285714
+    spool_draw_radius = 10
 
     # Path Variables
     max_vel = 1
     accel = 2
 
     # Starting pointer position. x and y go from 0 to 1
-    x = 0.4
+    x = 0.5
     y = 0.5
 
     # Pygame Display Constants
@@ -25,17 +27,29 @@ def main():
     path_width = 3
     cable_width = 1
     quit_button = pygame.K_q
+    mark_dist = spool_draw_radius / 2.0
+    mark_radius = 3
 
-    left_spool_center = (spool_radius, spool_radius)
-    right_spool_center = (screen_size[0] - spool_radius, spool_radius)
+    left_spool_center = (spool_draw_radius, spool_draw_radius)
+    right_spool_center = (screen_size[0] - spool_draw_radius, spool_draw_radius)
 
     # Generate path x and y coordinates
-    xs, ys = vision.scan_image("images/test2.jpg")
-    np.insert(xs, 0, x)
-    np.insert(ys, 0, y)
+    xs, ys = vision.scan_image("images/heart.png")
+
+    # Plot the desired path
+    plt.plot(xs, 1.0 - ys)
+    plt.show()
+
+    # Add the current pointer center to the start of the path
+    xs = np.insert(xs, 0, x)
+    ys = np.insert(ys, 0, y)
 
     # Generate the path states (the pen should be down half the time)
     pen_states = [motion.PEN_DOWN for _ in xs]
+    # This state does not get used. We set it for illustrative purposes.
+    pen_states[0] = motion.PEN_DOWN
+    # We want the pen to be up on the way to the path.
+    pen_states[1] = motion.PEN_UP
 
     # Generate the path
     path = motion.Path(xs, ys, pen_states, max_vel, accel)
@@ -60,6 +74,8 @@ def main():
     t = 0
     dt = 0.001
     s = 0
+    left_mark_theta = 0
+    right_mark_theta = math.pi
 
     pointer_center = (x * screen_size[0], y * screen_size[1])
 
@@ -89,8 +105,16 @@ def main():
         pygame.draw.circle(screen, (0, 255, 0), pointer_center, pointer_icon_radius)
 
         # Draw the two pulleys
-        pygame.draw.circle(screen, (0, 0, 0), left_spool_center, spool_radius)
-        pygame.draw.circle(screen, (0, 0, 0), right_spool_center, spool_radius)
+        pygame.draw.circle(screen, (0, 0, 0), left_spool_center, spool_draw_radius)
+        pygame.draw.circle(screen, (0, 0, 0), right_spool_center, spool_draw_radius)
+
+        # Draw the pulley marks
+        pygame.draw.circle(screen, (255, 0, 0), (left_spool_center[0] + mark_dist * math.cos(left_mark_theta),
+                                                 left_spool_center[1] + mark_dist * math.sin(left_mark_theta)),
+                           mark_radius)
+        pygame.draw.circle(screen, (255, 0, 0), (right_spool_center[0] + mark_dist * math.cos(right_mark_theta),
+                                                 right_spool_center[1] + mark_dist * math.sin(right_mark_theta)),
+                           mark_radius)
 
         # Draw the pulley strings
         pygame.draw.line(screen, (0, 0, 0), left_spool_center, pointer_center, cable_width)
@@ -105,6 +129,11 @@ def main():
             x += v * math.cos(theta) * dt
             y += v * math.sin(theta) * dt
             s += v * dt
+
+            left_ang, right_ang = motion.point_vel_to_spool_vel(x, y, v*math.cos(theta), v*math.cos(theta),
+                                                                spool_actual_radius, 1)
+            left_mark_theta += left_ang*dt
+            right_mark_theta += right_ang*dt
 
         t += dt
 

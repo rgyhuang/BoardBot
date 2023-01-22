@@ -10,7 +10,6 @@ def scan_image(filepath: str, white_text: bool = False):
 
     blurred = cv2.GaussianBlur(img, (3, 3), 1, 1)
     thinned = cv2.ximgproc.thinning(blurred, thinningType=cv2.ximgproc.THINNING_ZHANGSUEN)
-    #canny = cv2.Canny(thinned, 0, 255)
     cv2.imshow("img", thinned)
 
     contours, _ = cv2.findContours(thinned, cv2.RETR_LIST, cv2.CHAIN_APPROX_NONE)
@@ -48,13 +47,5 @@ def scan_image(filepath: str, white_text: bool = False):
 
     xs += 0.25
     ys += 0.25
-
-    min_x = np.min(xs)
-    min_y = np.min(ys)
-    max_x = np.max(xs)
-    max_y = np.max(ys)
-
-    print("min: "+str((min_x, min_y)))
-    print("max: "+str((max_x, max_y)))
 
     return xs, ys
