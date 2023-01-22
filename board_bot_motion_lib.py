@@ -1,7 +1,6 @@
 import math
 import numpy as np
 import scipy.integrate
-from numpy import diff, add
 from scipy.interpolate import CubicSpline
 
 PEN_UP = 0
