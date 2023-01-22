@@ -3,6 +3,7 @@ import board_bot_motion_lib as motion
 import pygame
 import numpy as np
 from matplotlib import pyplot as plt
+import vision
 
 
 def main():
@@ -32,12 +33,12 @@ def main():
     right_spool_center = (screen_size[0] - spool_radius, spool_radius)
 
     # Generate path x and y coordinates
-    ts = np.linspace(0, 1, num=100)
-    xs = [circle_x - circle_radius * math.cos(2 * math.pi * t) for t in ts]
-    ys = [circle_y - circle_radius * math.sin(2 * math.pi * t) for t in ts]
+    xs, ys = vision.scan_image("C:/Users/coles/Desktop/heart.png")
+    np.insert(xs, 0, x)
+    np.insert(ys, 0, y)
 
     # Generate the path states (the pen should be down half the time)
-    pen_states = [motion.PEN_DOWN if t <= 0.5 else motion.PEN_UP for t in ts]
+    pen_states = [motion.PEN_DOWN for _ in xs]
 
     # Generate the path
     path = motion.Path(xs, ys, pen_states, max_vel, accel)
@@ -87,9 +88,6 @@ def main():
             elif event.type == pygame.QUIT:
                 running = False
 
-        # Fill the background with white
-        # screen.fill(background_color)
-
         # Clear the marker
         pygame.draw.circle(screen, (255, 255, 255), pointer_center, pointer_icon_radius)
 
@@ -107,7 +105,7 @@ def main():
 
         # Draw the circular path
         pygame.draw.circle(screen, (255, 0, 0),
-                           (0.5*screen_size[0], 0.5*screen_size[1]), 0.1*screen_size[0], width=1)
+                           (0.5 * screen_size[0], 0.5 * screen_size[1]), 0.1 * screen_size[0], width=1)
 
         # Draw the pulley strings
         pygame.draw.line(screen, (0, 0, 0), left_spool_center, pointer_center, cable_width)
@@ -119,15 +117,15 @@ def main():
 
         # Theta != None iff we haven't finished the path
         if theta is not None:
-            x += v*math.cos(theta)*dt
-            y += v*math.sin(theta)*dt
-            s += v*dt
+            x += v * math.cos(theta) * dt
+            y += v * math.sin(theta) * dt
+            s += v * dt
 
         t += dt
 
         # Draw the current location on the screen overlay (if pen is down)
         if pen == motion.PEN_DOWN:
-            pygame.draw.circle(path_overlay, (0, 0, 0), pointer_center, path_width/2.0)
+            pygame.draw.circle(path_overlay, (0, 0, 0), pointer_center, path_width / 2.0)
 
         screen.blit(path_overlay, (0, 0))
         pygame.display.update()

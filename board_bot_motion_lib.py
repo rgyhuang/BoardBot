@@ -75,7 +75,16 @@ class Path:
 
         # This is an awful way to re-parameterize the curve, but it works
         arc_pieces = [arc(t) for t in ts]
-        s = [scipy.integrate.simpson(arc_pieces[0:i], ts[0:i]) for i in range(1, xs_len)]
+
+        s = [scipy.integrate.trapezoid(arc_pieces[:i], ts[:i]) for i in range(1, xs_len)]
+        print(s[207:])
+        for i in range(len(s) - 1):
+            diff = s[i+1] - s[i]
+            if diff < 0:
+                z=1
+                #print(i)
+                #print(str((s[i], s[i+1])))
+
         self.dist = scipy.integrate.simpson(arc_pieces, ts)
         s.append(self.dist)
 
