@@ -89,7 +89,9 @@ class Path:
 
         self.pen_up_limits = []
         self.pen_down_limits = []
-        for i in range(len(pen_states)):
+        pen_states_len = len(pen_states)
+
+        for i in range(pen_states_len):
             state = pen_states[i]
             if state == PEN_UP:
                 self.pen_up_limits.append(s[i])

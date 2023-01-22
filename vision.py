@@ -1,5 +1,9 @@
 import cv2
+import numpy
 import numpy as np
+
+display_width = 640
+display_height = 480
 
 
 def scan_image(filepath: str, white_text: bool = False):
@@ -10,9 +14,20 @@ def scan_image(filepath: str, white_text: bool = False):
 
     blurred = cv2.GaussianBlur(img, (3, 3), 1, 1)
     thinned = cv2.ximgproc.thinning(blurred, thinningType=cv2.ximgproc.THINNING_ZHANGSUEN)
-    cv2.imshow("img", thinned)
 
-    contours, _ = cv2.findContours(thinned, cv2.RETR_LIST, cv2.CHAIN_APPROX_NONE)
+    (height, width) = thinned.shape[:2]
+    if width > height:
+        scale_ratio = float(display_height) / height
+        display_image = cv2.resize(thinned, (int(scale_ratio * width), display_height),
+                                   interpolation=cv2.INTER_AREA)
+    else:
+        scale_ratio = float(display_width) / width
+        display_image = cv2.resize(thinned, (display_width, int(scale_ratio * height)),
+                                   interpolation=cv2.INTER_AREA)
+
+    cv2.imshow("img", display_image)
+
+    contours, _ = cv2.findContours(thinned, cv2.RETR_TREE, cv2.CHAIN_APPROX_NONE)
 
     word_contour = None
     for contour in contours:
@@ -28,8 +43,11 @@ def scan_image(filepath: str, white_text: bool = False):
     ys = np.empty(contour_len)
     for i in range(contour_len):
         x, y = word_contour[i][0]
-        xs[i] = x
-        ys[i] = y
+        xs[i] = float(x)
+        ys[i] = float(y)
+
+    xs = numpy.array(xs)
+    ys = numpy.array(ys)
 
     min_x = np.min(xs)
     min_y = np.min(ys)
@@ -39,8 +57,10 @@ def scan_image(filepath: str, white_text: bool = False):
     xs -= min_x
     ys -= min_y
 
-    xs /= max_x - min_x
-    ys /= max_y - min_y
+    scale = max(max_x - min_x, max_y - min_y)
+
+    xs /= float(scale)
+    ys /= float(scale)
 
     xs /= 2.0
     ys /= 2.0

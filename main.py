@@ -34,9 +34,10 @@ def main():
     right_spool_center = (screen_size[0] - spool_draw_radius, spool_draw_radius)
 
     # Generate path x and y coordinates
-    xs, ys = vision.scan_image("images/heart.png")
+    xs, ys = vision.scan_image("images/madeline.png")
 
     # Plot the desired path
+    plt.axes().set_aspect('equal')
     plt.plot(xs, 1.0 - ys)
     plt.show()
 
